@@ -49,6 +49,8 @@ def read_dataset():
 
 ### 4. MODEL CONSTRUCTION
 # build generator using a DNN
+# input: one dimensional noise vector
+# output: 28 x 28 x 1 fake image
 def build_generator():
     model = Sequential()
 
@@ -70,6 +72,8 @@ def build_generator():
     return model
 
 # build discriminator using a DNN
+# input: 28 x 28 x 1 image (real or fake)
+# output: 1 sigmoid output (probability)
 def build_discriminator():
     model = Sequential()
 

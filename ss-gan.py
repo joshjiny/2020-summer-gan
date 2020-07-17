@@ -69,11 +69,9 @@ def batch_unlabeled():
     return imgs
 
 
-
-
 ### 4. MODEL CONSTRUCTION
 # build CNN-based generator
-# input: one dimensional noise array 
+# input: one dimensional noise vector
 # output: 28 x 28 x 1 fake image
 def build_generator():
     model = Sequential()
@@ -183,6 +181,7 @@ def build_GAN():
                        metrics=['accuracy'])
 
     # build & compile the discriminator for unsupervised training
+    # note that we do not care about accuracy
     disc_unsuper = build_disc_unsuper(share)
     disc_unsuper.compile(optimizer='Adam', loss='binary_crossentropy')
 
@@ -215,6 +214,7 @@ def train_discriminator():
 
     # supervised train on real labeled examples
     # supervised discriminator has 10 softmax outputs
+    # we drop accuracy
     d_loss_super, _ = disc_super.train_on_batch(imgs, labels)
 
     # labels for real and fake images
@@ -230,9 +230,11 @@ def train_discriminator():
 
     # unsupervised train on real unlabeled examples
     # unsupervised discriminator has 1 sigmoid output
+    # accuracy will not be calculated
     d_loss_real = disc_unsuper.train_on_batch(imgs_unlabeled, all_1)
 
     # unsupervised train on fake examples
+    # accuracy will not be calculated
     d_loss_fake = disc_unsuper.train_on_batch(fake, all_0)
 
     # computing loss by taking the average
