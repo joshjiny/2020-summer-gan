@@ -24,7 +24,7 @@ from skimage.transform import resize
 
 
 ### 2. CONSTANTS AND HYPER-PARAMETERS
-MY_EPOCH = 3
+MY_EPOCH = 5
 MY_BATCH = 2
 LOW_SHAPE = (64, 64, 3)
 HIGH_SHAPE = (256, 256, 3)
@@ -307,7 +307,7 @@ def train_disc():
     # average out the two loss values
     d_loss = 0.5 * np.add(d_loss_real, d_loss_fake)
 
-    return d_loss
+    return d_loss[0]
 
 # train generator
 # generator needs to fool both discriminator & resnet-50!
@@ -325,7 +325,7 @@ def train_gen():
     # returns three values: combined loss, entropy loss, mse loss
     g_loss = sr_gan.train_on_batch([real_low], [all_1, resnet_1])
 
-    return g_loss
+    return g_loss[0]
 
 # save low-res, high-res (original) and fake high-res images
 def save_images(low, original, fake, path):
@@ -350,28 +350,30 @@ def save_images(low, original, fake, path):
 
 # we pick two random images to test our GAN model
 def evaluate_GAN(epoch):
-    for i in range(2):
-        # sample a new batch of images
-        high, low = sample_images()
+    # sample a new batch of images
+    high, low = sample_images()
 
-        # we use generator to turn a low resolution image to high        
-        # and save the 3 image files
-        fake = generator.predict_on_batch(low)
-        path = os.path.join(OUT_DIR, "img_{}_{}".format(epoch, i))
+    # we use generator to turn a low resolution image to high
+    fake = generator.predict_on_batch(low)
 
-        # save the first image in the batch
-        save_images(low[0], high[0], fake[0], path)
+    # save the images in the current batch
+    for i in range(MY_BATCH):
+        path = os.path.join(OUT_DIR, "img-{}-{}".format(epoch, i))
+        save_images(low[i], high[i], fake[i], path)
 
 # overall GAN training
 # we alternate between discriminator and generator training 
 def train_GAN():
-    print('\n== GAN TRAINING STARTS ==')
+    print('\n=== GAN TRAINING BEGINS\n')
 
     # repeat epochs
     began = time()
     for epoch in range(MY_EPOCH):
-        d_loss, _ = train_disc()
-        g_loss, _, _ = train_gen()
+        # train discriminator and calculate loss
+        d_loss = train_disc()
+
+        # train geneator and calculate loss
+        g_loss = train_gen()
 
         # print loss
         if (epoch % 50) == 0 or True:
@@ -379,33 +381,32 @@ def train_GAN():
                   .format(epoch, d_loss, g_loss))
             evaluate_GAN(epoch)
 
-    # report final loss
-    print('\n== FINAL LOSS INFO ==')
-    print('Discriminator:', d_loss)
-    print('Generator:', g_loss)
+    # print training time
     total = time() - began
     print('\n=== Training Time: = {:.0f} secs, {:.1f} hrs'.format(total, total / 3600))
 
 
 ### 6. MODEL EVALUATION
 # prediction with GAN
-def gan_prediction():
+def pred_GAN():
+    print('\n=== GAN PREDICTION BEGINS')
+
     # we just need a trained generator
     generator = build_generator()
     generator.load_weights('./generator.h5')
 
-    for i in range(10):
+    # use 5 batches for prediction
+    for i in range(5):
         # sample a new batch of images
         high, low = sample_images()
 
         # we use generator to produce fake high image
         fake = generator.predict_on_batch(low)
-        path = os.path.join(OUT_DIR, "pred-{}".format(i))
 
-        # save the first image in the batch
-        save_images(low[0], high[0], fake[0], path)
-
-    print('\n== GAN PREDICTION DONE ==')
+        # save the images in the current batch
+        for j in range(MY_BATCH):
+            path = os.path.join(OUT_DIR, "pred-{}-{}".format(i, j))
+            save_images(low[j], high[j], fake[j], path)
 
 
 ### 7. MAIN ROUTINE
@@ -416,4 +417,4 @@ if TRAINING:
     train_GAN()
     generator.save_weights(os.path.join(OUT_DIR, "generator.h5"))
 else:
-    gan_prediction()
+    pred_GAN()

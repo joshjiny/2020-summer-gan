@@ -257,23 +257,8 @@ def train_generator():
 
     return g_loss
 
-# GAN training function
-def train_GAN():
-    print('\n=== GAN TRAINING BEGINS')
-    for itr in range(MY_EPOCH):
-        d_loss_s, d_loss_u = train_discriminator()
-        g_loss = train_generator()
-
-        # output generator and discriminator loss values
-        if itr % 100 == 0 or True:
-            print('Epoch: {}, generator loss: {:.3f}, discriminator super loss: {:.3f}, unsuper loss: {:.3f}'
-                  .format(itr, g_loss, d_loss_s, d_loss_u))
-
-            # output a sample of generated image
-            sample_images(itr)
-
 # test generator with sample images
-def sample_images(itr):
+def save_images(itr):
     # display 16 images
     row = col = 4
 
@@ -295,6 +280,29 @@ def sample_images(itr):
     path = os.path.join(OUT_DIR, "img-{}".format(itr + 1))
     plt.savefig(path)
     plt.close()
+
+# GAN training function
+def train_GAN():
+    print('\n=== GAN TRAINING BEGINS\n')
+
+    # repeat epochs
+    began = time()
+    for itr in range(MY_EPOCH):
+        d_loss_s, d_loss_u = train_discriminator()
+        g_loss = train_generator()
+
+        # output generator and discriminator loss values
+        if itr % 100 == 0 or True:
+            print('Epoch: {}, generator loss: {:.3f}, discriminator super loss: {:.3f}, '
+                  'unsuper loss: {:.3f}'.format(itr, g_loss, d_loss_s, d_loss_u))
+
+            # output a sample of generated image
+            save_images(itr)
+
+    # print training time
+    total = time() - began
+    print('\n=== Training Time: = {:.0f} secs, {:.1f} hrs'.format(total, total / 3600))
+
 
 
 ### 6. MODEL EVALUATION
@@ -327,7 +335,7 @@ X_train, Y_train, X_test, Y_test = read_dataset()
 generator, disc_unsuper, disc_super, gan = build_GAN()
 
 # train GAN and report training time
-began = time()
 train_GAN()
-print('\n=== Training Time (in seconds) = {:.1f}'.format(time() - began))
+
+# evaluating semi-supervised discriminator
 eval_disc()

@@ -183,13 +183,13 @@ def build_GAN():
     noise = Input(shape=(MY_NOISE,))
     fake = generator([noise, gen_cond])
     gan_out = discriminator([fake, disc_cond])
-    gan = Model(inputs=[noise, gen_cond, disc_cond], output=gan_out)
-    gan.compile(optimizer=Adam(0.001, 0.5), loss='binary_crossentropy')
+    cnd_gan = Model(inputs=[noise, gen_cond, disc_cond], output=gan_out)
+    cnd_gan.compile(optimizer=Adam(0.001, 0.5), loss='binary_crossentropy')
 
     print('\n=== GAN SUMMARY ===')
-    gan.summary()
+    cnd_gan.summary()
 
-    return generator, discriminator, gan
+    return generator, discriminator, cnd_gan
 
 
 ### 5. MODEL TRAINING
@@ -208,7 +208,7 @@ def rand_label(n):
 
 # train discriminator
 # once with real image/label and next with fake image/label
-def train_disc(generator, discriminator, bid):
+def train_disc(bid):
     # next batch of real images
     images = X_train[bid * MY_BATCH: (bid + 1) * MY_BATCH]
     labels = Y_train[bid * MY_BATCH: (bid + 1) * MY_BATCH]
@@ -233,10 +233,10 @@ def train_disc(generator, discriminator, bid):
     # calculate discriminator loss
     d_loss = 0.5 * np.add(d_loss_real, d_loss_fake)
 
-    return d_loss
+    return d_loss[0]
 
 # train generator
-def train_gen(gan):
+def train_gen():
     # generate a batch of fake images
     # we use random noise and random labels
     noise = get_noise(MY_BATCH, MY_NOISE)
@@ -245,13 +245,13 @@ def train_gen(gan):
     # the goal is to fool discriminator
     # returns one value: loss
     all_1 = 1 - np.random.rand(MY_BATCH, 1) * 0.05
-    g_loss = gan.train_on_batch([noise, labels_ran, labels_ran], all_1)
+    g_loss = cnd_gan.train_on_batch([noise, labels_ran, labels_ran], all_1)
 
     return g_loss
 
 # test generator and display fake images
 # we give one-hot conditional input to generator
-def show_samples(bid):
+def save_samples(bid):
     # display 10 images of given category
     fig, axs = plt.subplots(2, 5, figsize=(10,6))
 
@@ -276,8 +276,8 @@ def show_samples(bid):
     plt.close()
 
 # run epochs to train GAN
-def train_GAN(generator, discriminator, gan):
-    print('\n=== GAN TRAINING BEGINS')
+def train_GAN():
+    print('\n=== GAN TRAINING BEGINS\n')
 
     # total number of batches used for each epoch
     num_batches = int(X_train.shape[0] / MY_BATCH)
@@ -288,8 +288,8 @@ def train_GAN(generator, discriminator, gan):
     for epoch in range(MY_EPOCH):
         for bid in range(num_batches):
             # train discriminator and generator and obtain their loss values
-            d_loss, _ = train_disc(generator, discriminator, bid)
-            g_loss = train_gen(gan)
+            d_loss = train_disc(bid)
+            g_loss = train_gen()
 
             # print the current status
             if bid % 100 == 0 or True:
@@ -297,7 +297,7 @@ def train_GAN(generator, discriminator, gan):
                       .format(epoch, bid, g_loss, d_loss))
         print('Epoch: {}, generator loss: {:.3f}, discriminator loss: {:.3f}\n'
               .format(epoch, g_loss, d_loss))
-        show_samples(epoch)
+        save_samples(epoch)
 
     total = time() - began
     print('\n=== Training Time: = {:.0f} secs, {:.1f} hrs'.format(total, total / 3600))
@@ -305,7 +305,15 @@ def train_GAN(generator, discriminator, gan):
 
 ### 6. MODEL EVALUATION
 # show sample 9 images per class
-def final_samples():
+def pred_GAN():
+    print('\n=== GAN PREDICTION BEGINS')
+
+    # build generatpr for prediction
+    noise_input = Input(shape=(MY_NOISE,))
+    gen_cond = Input(shape=(10,))
+    generator = build_gen(noise_input, gen_cond)
+    generator.load_weights('./generator.h5')
+
     for tag in range(10):
         # generate 9 1-hot labels and noise vectors for each class
         label = to_categorical([tag] * 9, 10)
@@ -336,13 +344,8 @@ def final_samples():
 # otherwise, we use the saved models to do prediction
 X_train, Y_train = read_dataset()
 if TRAINING:
-    generator, discriminator, gan = build_GAN()
-    train_GAN(generator, discriminator, gan)
+    generator, discriminator, cnd_gan = build_GAN()
+    train_GAN()
     generator.save_weights(os.path.join(OUT_DIR, 'generator.h5'))
 else:
-    noise_input = Input(shape=(MY_NOISE,))
-    gen_cond = Input(shape=(10,))
-    generator = build_gen(noise_input, gen_cond)
-    generator.load_weights('./generator.h5')
-    generator.summary()
-    final_samples()
+    pred_GAN()

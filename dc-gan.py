@@ -190,7 +190,10 @@ def train_generator():
 
 # GAN training function
 def train_GAN():
-    print('\n=== GAN TRAINING BEGINS')
+    print('\n=== GAN TRAINING BEGINS\n')
+
+    # repeat epochs
+    began = time()
     for itr in range(MY_EPOCH):
         d_loss, acc = train_discriminator()
         g_loss = train_generator()
@@ -209,6 +212,10 @@ def train_GAN():
 
             # output a sample of generated image
             sample_images(itr)
+
+    # print training time
+    total = time() - began
+    print('\n=== Training Time: = {:.0f} secs, {:.1f} hrs'.format(total, total / 3600))
 
 # we test generator by showing 16 sample images
 def sample_images(itr):
@@ -281,9 +288,7 @@ X_train = read_dataset()
 discriminator, generator, gan = build_GAN()
 
 # train GAN and report training time
-began = time()
 train_GAN()
-print('\n=== Training Time (in seconds) = {:.1f}'.format(time() - began))
 
 # display loss and accuracy plots
 loss_plot()
