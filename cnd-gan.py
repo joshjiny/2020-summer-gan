@@ -214,6 +214,7 @@ def train_disc(generator, discriminator, bid):
     labels = Y_train[bid * MY_BATCH: (bid + 1) * MY_BATCH]
 
     # train discriminator on real data
+    # returns two values: loss and accuracy
     all_1 = 1 - np.random.rand(MY_BATCH, 1) * 0.05
     d_loss_real = discriminator.train_on_batch([images, labels], all_1)
 
@@ -225,6 +226,7 @@ def train_disc(generator, discriminator, bid):
     fakes = generator.predict([noise, labels])
 
     # train discriminator on fake data
+    # returns two values: loss and accuracy
     all_0 = np.random.rand(MY_BATCH, 1) * 0.05
     d_loss_fake = discriminator.train_on_batch([fakes, labels], all_0)
 
@@ -241,6 +243,7 @@ def train_gen(gan):
     labels_ran = rand_label(MY_BATCH)
 
     # the goal is to fool discriminator
+    # returns one value: loss
     all_1 = 1 - np.random.rand(MY_BATCH, 1) * 0.05
     g_loss = gan.train_on_batch([noise, labels_ran, labels_ran], all_1)
 
@@ -285,22 +288,22 @@ def train_GAN(generator, discriminator, gan):
     for epoch in range(MY_EPOCH):
         for bid in range(num_batches):
             # train discriminator and generator and obtain their loss values
-            d_loss = train_disc(generator, discriminator, bid)
+            d_loss, _ = train_disc(generator, discriminator, bid)
             g_loss = train_gen(gan)
 
             # print the current status
             if bid % 100 == 0 or True:
                 print('Epoch: {}, batch: {}, generator loss: {:.3f}, discriminator loss: {:.3f}'
-                      .format(epoch, bid, g_loss, d_loss[0]))
+                      .format(epoch, bid, g_loss, d_loss))
         print('Epoch: {}, generator loss: {:.3f}, discriminator loss: {:.3f}\n'
-              .format(epoch, g_loss, d_loss[0]))
+              .format(epoch, g_loss, d_loss))
         show_samples(epoch)
 
     total = time() - began
     print('\n=== Training Time: = {:.0f} secs, {:.1f} hrs'.format(total, total / 3600))
 
 
-### 6. MAIN ROUTINE
+### 6. MODEL EVALUATION
 # show sample 9 images per class
 def final_samples():
     for tag in range(10):
@@ -327,7 +330,8 @@ def final_samples():
         plt.savefig(path)
         plt.close()
 
-# main routine
+
+### 7. MAIN ROUTINE
 # if training is not done, we do training and save the models
 # otherwise, we use the saved models to do prediction
 X_train, Y_train = read_dataset()

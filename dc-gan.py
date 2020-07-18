@@ -169,7 +169,7 @@ def train_discriminator():
     fake = generator.predict(z)
 
     # discriminator weights change, but generator weights are untouched
-    # train_on_batch() returns two numbers: loss and accuracy
+    # returns two values: loss and accuracy
     d_loss_real = discriminator.train_on_batch(real, all_1)
     d_loss_fake = discriminator.train_on_batch(fake, all_0)
     d_loss, accuracy = 0.5 * np.add(d_loss_real, d_loss_fake)
@@ -182,7 +182,7 @@ def train_generator():
     z = np.random.normal(0, 1, (MY_BATCH, MY_NOISE))
 
     # note we train the entire gan but fix discriminator weights
-    # generator does not generate accuracy
+    # returns one value: loss
     all_1 = np.ones((MY_BATCH, 1))
     g_loss = gan.train_on_batch(z, all_1)
 

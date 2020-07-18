@@ -124,7 +124,7 @@ def build_GAN():
 
 ### 5. MODEL TRAINING
 # train discriminator
-def train_discriminator(itr):
+def train_discriminator():
     # label for real images: all ones
     # double parenthesis are needed to create 2-dim array
     all_1 = np.ones((MY_BATCH, 1))
@@ -135,21 +135,15 @@ def train_discriminator(itr):
     # get a random batch of real images
     idx = np.random.randint(0, X_train.shape[0], MY_BATCH)
     real = X_train[idx]
-    if itr == 0:
-        print('=== Random training sample set shape:', real.shape)
 
     # generate a batch of fake images
     z = np.random.normal(0, 1, (MY_BATCH, MY_NOISE))
-    if itr == 0:
-        print('=== Generator input shape:', z.shape)
 
     # use generator to produce fake images
     fake = generator.predict(z)
-    if itr == 0:
-        print('\n=== Fake image shape:', fake.shape)
 
     # discriminator weights change, but generator weights are untouched
-    # train_on_batch() returns two numbers: loss and accuracy
+    # returns two values: loss and accuracy
     d_loss_real = discriminator.train_on_batch(real, all_1)
     d_loss_fake = discriminator.train_on_batch(fake, all_0)
     d_loss = 0.5 * np.add(d_loss_real, d_loss_fake)
@@ -163,6 +157,7 @@ def train_generator():
 
     # note we train the entire gan but fix discriminator weights
     # generator does not generate accuracy
+    # returns one value: generator loss
     all_1 = np.ones((MY_BATCH, 1))
     g_loss = gan.train_on_batch(z, all_1)
 
@@ -172,7 +167,7 @@ def train_generator():
 def train_GAN():
     print('\n=== GAN TRAINING BEGINS')
     for itr in range(MY_EPOCH):
-        d_loss = train_discriminator(itr)
+        d_loss = train_discriminator()
         g_loss = train_generator()
 
         # output generator and discriminator loss values

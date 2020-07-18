@@ -22,7 +22,7 @@ from keras.utils import to_categorical
 
 
 ### 2. CONSTANTS AND HYPER-PARAMETERS
-MY_EPOCH = 200
+MY_EPOCH = 20
 MY_BATCH = 1000
 MY_NOISE = 100
 img_shape = (28, 28, 1)
@@ -45,6 +45,9 @@ def read_dataset():
     Y_train = Y_train.reshape(60000, 1)
     X_test = X_test.reshape(10000, 28, 28, 1)
     Y_test = Y_test.reshape(10000, 1)
+
+    Y_train = to_categorical(Y_train, num_classes=10)
+    Y_test = to_categorical(Y_test, num_classes=10)
 
     X_train = (X_train.astype(np.float32) - 127.5) / 127.5
     X_test = (X_test.astype(np.float32) - 127.5) / 127.5
@@ -210,11 +213,10 @@ def build_GAN():
 def train_discriminator():
     # get labeled examples
     imgs, labels = batch_labeled()
-    labels = to_categorical(labels, 10)
 
     # supervised train on real labeled examples
     # supervised discriminator has 10 softmax outputs
-    # we drop accuracy
+    # returns two values: loss and accuracy
     d_loss_super, _ = disc_super.train_on_batch(imgs, labels)
 
     # labels for real and fake images
@@ -230,11 +232,11 @@ def train_discriminator():
 
     # unsupervised train on real unlabeled examples
     # unsupervised discriminator has 1 sigmoid output
-    # accuracy will not be calculated
+    # returns one value: loss
     d_loss_real = disc_unsuper.train_on_batch(imgs_unlabeled, all_1)
 
     # unsupervised train on fake examples
-    # accuracy will not be calculated
+    # returns one value: loss
     d_loss_fake = disc_unsuper.train_on_batch(fake, all_0)
 
     # computing loss by taking the average
@@ -249,7 +251,7 @@ def train_generator():
     z = np.random.normal(0, 1, (MY_BATCH, MY_NOISE))
 
     # note we train the entire gan but fix discriminator weights
-    # generator does not generate accuracy
+    # returns one value: loss
     all_1 = np.ones((MY_BATCH, 1))
     g_loss = gan.train_on_batch(z, all_1)
 
@@ -264,7 +266,7 @@ def train_GAN():
 
         # output generator and discriminator loss values
         if itr % 100 == 0 or True:
-            print('Epoch: {}, generator loss: {:.3f}, discriminator super: {:.3f}, unsuper: {:.3f}'
+            print('Epoch: {}, generator loss: {:.3f}, discriminator super loss: {:.3f}, unsuper loss: {:.3f}'
                   .format(itr, g_loss, d_loss_s, d_loss_u))
 
             # output a sample of generated image
@@ -295,7 +297,29 @@ def sample_images(itr):
     plt.close()
 
 
-### 6. MAIN ROUTINE
+### 6. MODEL EVALUATION
+#  first 100 images used to train supervised discriminator
+def training_set():
+    imgs = X_train[range(num_labeled)]
+    labels = Y_train[range(num_labeled)]
+
+    return imgs, labels
+
+# evaluating semi-supervised discriminator
+# compute classification accuracy on training set
+def eval_disc():
+    print('\n=== SUPERVISED DISCRIMINATOR EVALUATION')
+    x, y = training_set()
+    _, accuracy = disc_super.evaluate(x, y, verbose=0)
+    print("Training accuracy: %.2f%%" % (100 * accuracy))
+
+    # evaluating semi-supervised discriminator
+    # compute classification accuracy on test set
+    _, accuracy = disc_super.evaluate(X_test, Y_test, verbose = 0)
+    print("Test accuracy: %.2f%%" % (100 * accuracy))
+
+
+### 7. MAIN ROUTINE
 # read MNIST dataset and obtain all 4 sets
 X_train, Y_train, X_test, Y_test = read_dataset()
 
@@ -306,27 +330,4 @@ generator, disc_unsuper, disc_super, gan = build_GAN()
 began = time()
 train_GAN()
 print('\n=== Training Time (in seconds) = {:.1f}'.format(time() - began))
-
-
-### 7. MODEL EVALUATION
-#  first 100 images used to train supervised discriminator
-def training_set():
-    imgs = X_train[range(num_labeled)]
-    labels = Y_train[range(num_labeled)]
-
-    return imgs, labels
-
-# evaluating semi-supervised discriminator
-# compute classification accuracy on training set
-print('\n=== SUPERVISED DISCRIMINATOR EVALUATION')
-x, y = training_set()
-y = to_categorical(y, num_classes=10)
-_, accuracy = disc_super.evaluate(x, y, verbose=0)
-print("Training accuracy: %.2f%%" % (100 * accuracy))
-
-# evaluating semi-supervised discriminator
-# compute classification accuracy on test set
-Y_test = to_categorical(Y_test, num_classes=10)
-_, accuracy = disc_super.evaluate(X_test, Y_test, verbose = 0)
-print("Test accuracy: %.2f%%" % (100 * accuracy))
-
+eval_disc()
