@@ -10,8 +10,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-from time import time
 
+from time import time
 from keras.datasets import mnist
 from keras.layers import Activation, BatchNormalization
 from keras.layers import Dense, Flatten, Reshape
@@ -25,11 +25,6 @@ MY_EPOCH = 20
 MY_BATCH = 128
 MY_NOISE = 100
 img_shape = (28, 28, 1)
-
-# placeholder to store training status
-keep_loss = []
-keep_acc = []
-checkpoints = []
 
 # create output directory
 OUT_DIR = "./output/"
@@ -200,11 +195,6 @@ def train_GAN():
 
         # test generator and save training loss info
         if itr % 100 == 0 or True:
-            # save keep_loss and keep_acc for plotting later
-            keep_loss.append((d_loss, g_loss))
-            keep_acc.append(100.0 * acc)
-            checkpoints.append(itr + 1)
-
             # output generator and discriminator loss values
             if itr % 100 == 0 or True:
                 print('Epoch: {}, generator loss: {:.3f}, discriminator loss: {:.3f}, '
@@ -241,44 +231,6 @@ def sample_images(itr):
     plt.savefig(path)
     plt.close()
 
-# plot training keep_loss for discriminator and generator
-def loss_plot():
-    data = np.array(keep_loss)
-    plt.figure(figsize=(15, 5))
-
-    plt.plot(checkpoints, data.T[0], label = "Discriminator loss")
-    plt.plot(checkpoints, data.T[1], label = "Generator loss")
-    plt.xticks(checkpoints, rotation=90)
-
-    plt.title("Training Loss")
-    plt.xlabel("Iteration")
-    plt.ylabel("Loss")
-    plt.legend()
-
-    # save the plots at the output directory
-    path = os.path.join(OUT_DIR, 'loss-plot.png')
-    plt.savefig(path)
-    plt.close()
-
-# plot discriminator accuracy
-def acc_plot():
-    data = np.array(keep_acc)
-    plt.figure(figsize=(15, 5))
-    plt.plot(checkpoints, data, label = "Discriminator accuracy")
-
-    plt.xticks(checkpoints, rotation=90)
-    plt.yticks(range(0, 100, 5))
-
-    plt.title("Discriminator Accuracy")
-    plt.xlabel("Iteration")
-    plt.ylabel("Accuracy (%)")
-    plt.legend()
-
-    # save the plots at the output directory
-    path = os.path.join(OUT_DIR, 'acc-plot.png')
-    plt.savefig(path)
-    plt.close()
-
 
 ### 6. MAIN ROUTINE
 # read MNIST dataset, only the training input set
@@ -290,7 +242,4 @@ discriminator, generator, gan = build_GAN()
 # train GAN and report training time
 train_GAN()
 
-# display loss and accuracy plots
-loss_plot()
-acc_plot()
 
