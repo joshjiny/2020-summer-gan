@@ -16,7 +16,7 @@ from time import time
 from keras.applications import ResNet50
 from keras.layers import BatchNormalization, Activation
 from keras.layers import LeakyReLU, Add, Dense
-from keras.layers.convolutional import Conv2D, UpSampling2D
+from keras.layers import Conv2D, UpSampling2D
 from keras.models import Model
 from keras.optimizers import Adam
 from imageio import imread
@@ -91,7 +91,7 @@ def build_resnet():
     input_L = Input(shape=HIGH_SHAPE)
 
     # resnet50 accepts 224 x 224 x 3
-    # we form a dense layer between 256 x 256 x 3 and 224 x 224 x 3
+    # dense layer between 256 x 256 x 3 and 224 x 224 x 3
     features = resnet(input_L)
 
     # create a keras model
@@ -249,7 +249,8 @@ def build_GAN():
 
     # build and compile the discriminator network
     discriminator = build_discriminator()
-    discriminator.compile(loss='mse', optimizer=MY_OPT, metrics=['acc'])
+    discriminator.compile(loss='mse', optimizer=MY_OPT,
+                          metrics=['acc'])
 
     # build generator (we do not compile generator)
     generator = build_generator()
@@ -269,7 +270,7 @@ def build_GAN():
     discriminator.trainable = False
 
     # GAN input: low resolution image (goes to generator)
-    # GAN outputs include probs (discriminator) and features (resnet-50)
+    # GAN outputs: probs (discriminator) and features (resnet-50)
     sr_gan = Model([input_low], [probs, features])
 
     # GAN loss = 0.001 x entropy (probs) + 1 x mse (features)
@@ -330,6 +331,7 @@ def train_gen():
 # save low-res, high-res (original) and fake high-res images
 def save_images(low, original, fake, path):
     fig = plt.figure()
+
     ax = fig.add_subplot(1, 3, 1)
     ax.imshow((low * 127.5 + 127.5).astype(np.uint8))
     ax.axis("off")
@@ -372,18 +374,20 @@ def train_GAN():
         # train discriminator and calculate loss
         d_loss = train_disc()
 
-        # train geneator and calculate loss
+        # train generator and calculate loss
         g_loss = train_gen()
 
         # print loss
         if (epoch % 50) == 0 or True:
-            print("Epoch: {}, discriminator loss: {:.3f}, generator loss: {:.3f}"
+            print("Epoch: {}, discriminator loss: {:.3f}, "
+                  "generator loss: {:.3f}"
                   .format(epoch, d_loss, g_loss))
             evaluate_GAN(epoch)
 
     # print training time
     total = time() - began
-    print('\n=== Training Time: = {:.0f} secs, {:.1f} hrs'.format(total, total / 3600))
+    print('\n=== Training Time: = {:.0f} secs, {:.1f} hrs'
+          .format(total, total / 3600))
 
 
 ### 6. MODEL EVALUATION
@@ -405,13 +409,15 @@ def pred_GAN():
 
         # save the images in the current batch
         for j in range(MY_BATCH):
-            path = os.path.join(OUT_DIR, "pred-{}-{}".format(i, j))
+            path = os.path.join(OUT_DIR, "pred-{}-{}"
+                                .format(i, j))
             save_images(low[j], high[j], fake[j], path)
 
 
 ### 7. MAIN ROUTINE
 # if training is not done, we do training and save the model
 # otherwise, we use the saved model to do prediction
+
 if TRAINING:
     resnet, discriminator, generator, sr_gan = build_GAN()
     train_GAN()

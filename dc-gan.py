@@ -56,24 +56,27 @@ def read_dataset():
 def build_generator():
     model = Sequential()
 
-    # reshape input into 7 x 7 x 256 tensor via a fully connected layer
+    # reshape input into 7 x 7 x 256 tensor via Dense layer
     # convolution needs 3-dimension input
     # note that reshape needs (())
     model.add(Dense(7 * 7 * 256, input_dim=MY_NOISE))
     model.add(Reshape((7, 7, 256)))
 
-    # 1st transposed convolution layer, from 7 x 7x 256 into 14 x 14 x 128 tensor
-    model.add(Conv2DTranspose(128, kernel_size=3, strides=2, padding='same'))
+    # 1st transpose layer: 7 x 7x 256 into 14 x 14 x 128 tensor
+    model.add(Conv2DTranspose(128, kernel_size=3, strides=2,
+                              padding='same'))
     model.add(BatchNormalization())
     model.add(LeakyReLU(alpha=0.01))
 
-    # 2nd transposed convolution layer, from 14 x 14 x 128 to 14 x 14 x 64 tensor
-    model.add(Conv2DTranspose(64, kernel_size=3, strides=1, padding='same'))
+    # 2nd transpose layer: 14 x 14 x 128 to 14 x 14 x 64 tensor
+    model.add(Conv2DTranspose(64, kernel_size=3, strides=1,
+                              padding='same'))
     model.add(BatchNormalization())
     model.add(LeakyReLU(alpha=0.01))
 
-    # 3rd transposed convolution layer, from 14 x 14 x 64 to 28 x 28 x 1 tensor
-    model.add(Conv2DTranspose(1, kernel_size=3, strides=2, padding='same'))
+    # 3rd transpose layer: 14 x 14 x 64 to 28 x 28 x 1 tensor
+    model.add(Conv2DTranspose(1, kernel_size=3, strides=2,
+                              padding='same'))
 
     # output layer with tanh activation
     model.add(Activation('tanh'))
@@ -91,17 +94,18 @@ def build_generator():
 def build_discriminator():
     model = Sequential()
 
-    # 1st convolutional layer, from 28 x 28 x 1 into 14 x 14 x 32 tensor
-    model.add(Conv2D(32, kernel_size=3, strides=2, input_shape = img_shape, 
-        padding='same'))
+    # 1st convolution: 28 x 28 x 1 into 14 x 14 x 32 tensor
+    model.add(Conv2D(32, kernel_size=3, strides=2,
+                     input_shape = img_shape,
+                     padding='same'))
     model.add(LeakyReLU(alpha=0.01))
 
-    # 2nd convolutional layer, from 14 x 14 x 32 into 7 x 7 x 64 tensor
+    # 2nd convolution: 14 x 14 x 32 into 7 x 7 x 64 tensor
     model.add(Conv2D(64, kernel_size=3, strides=2, padding='same'))
     model.add(BatchNormalization())
     model.add(LeakyReLU(alpha=0.01))
 
-    # 3rd convolutional layer, from 7 x 7 x 64 tensor into 3 x 3 x 128 tensor
+    # 3rd convolution: 7 x 7 x 64 into 3 x 3 x 128 tensor
     model.add(Conv2D(128, kernel_size=3, strides=2, padding='same'))
     model.add(BatchNormalization())
     model.add(LeakyReLU(alpha=0.01))
@@ -122,14 +126,15 @@ def build_GAN():
 
     # build discriminator first
     discriminator = build_discriminator()
-    discriminator.compile(loss='binary_crossentropy', optimizer='Adam',
+    discriminator.compile(loss='binary_crossentropy',
+                          optimizer='Adam',
                           metrics=['accuracy'])
 
     # build generator next
     # we do not compile generator separately
     generator = build_generator()
 
-    # keep discriminator’s parameters constant for generator training
+    # fix discriminator during generator training
     discriminator.trainable = False
 
     # merge generator and discriminator
@@ -163,7 +168,7 @@ def train_discriminator():
     # use generator to produce fake images
     fake = generator.predict(z)
 
-    # discriminator weights change, but generator weights are untouched
+    # discriminator weights change, but generator weights don’t
     # returns two values: loss and accuracy
     d_loss_real = discriminator.train_on_batch(real, all_1)
     d_loss_fake = discriminator.train_on_batch(fake, all_0)
@@ -197,15 +202,18 @@ def train_GAN():
         if itr % 100 == 0 or True:
             # output generator and discriminator loss values
             if itr % 100 == 0 or True:
-                print('Epoch: {}, generator loss: {:.3f}, discriminator loss: {:.3f}, '
-                      'accuracy: {:.1f}%'.format(itr, g_loss, d_loss, acc * 100))
+                print('Epoch: {}, generator loss: {:.3f}, '
+                      'discriminator loss: {:.3f}, '
+                      'accuracy: {:.1f}%'
+                      .format(itr, g_loss, d_loss, acc * 100))
 
             # output a sample of generated image
             sample_images(itr)
 
     # print training time
     total = time() - began
-    print('\n=== Training Time: = {:.0f} secs, {:.1f} hrs'.format(total, total / 3600))
+    print('\n=== Training Time: = {:.0f} secs, {:.1f} hrs'
+          .format(total, total / 3600))
 
 # we test generator by showing 16 sample images
 def sample_images(itr):

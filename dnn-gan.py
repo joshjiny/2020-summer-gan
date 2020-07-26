@@ -101,14 +101,15 @@ def build_GAN():
 
     # build discriminator first
     discriminator = build_discriminator()
-    discriminator.compile(loss='binary_crossentropy', optimizer='Adam',
+    discriminator.compile(loss='binary_crossentropy',
+                          optimizer='Adam',
                           metrics=['accuracy'])
 
     # build generator next
     # we do not compile generator separately
     generator = build_generator()
 
-    # keep discriminator’s parameters constant for generator training
+    # fix discriminator’s parameters for generator training
     discriminator.trainable = False
 
     # merge generator and discriminator
@@ -142,7 +143,7 @@ def train_discriminator():
     # use generator to produce fake images
     fake = generator.predict(z)
 
-    # discriminator weights change, but generator weights are untouched
+    # discriminator weights change, but generator weights don’t
     # returns two values: loss and accuracy
     d_loss_real = discriminator.train_on_batch(real, all_1)
     d_loss_fake = discriminator.train_on_batch(fake, all_0)
@@ -175,15 +176,18 @@ def train_GAN():
 
         # output generator and discriminator loss values
         if itr % 100 == 0 or True:
-            print('Epoch: {}, generator loss: {:.3f}, discriminator loss: {:.3f}, accuracy: {:.1f}%'
-                  .format(itr, g_loss, d_loss[0], d_loss[1] * 100))
+            acc = d_loss[1] * 100
+            print('Epoch: {}, generator loss: {:.3f}, '
+                  'discriminator loss: {:.3f}, accuracy: {:.1f}%'
+                  .format(itr, g_loss, d_loss[0], acc))
 
         # output a sample of generated image
         sample_images(itr)
 
     # print training time
     total = time() - began
-    print('\n=== Training Time: = {:.0f} secs, {:.1f} hrs'.format(total, total / 3600))
+    print('\n=== Training Time: = {:.0f} secs, {:.1f} hrs'
+          .format(total, total / 3600))
 
 # test generator with sample images
 def sample_images(itr):

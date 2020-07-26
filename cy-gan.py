@@ -27,6 +27,7 @@ MY_EPOCH = 10
 MY_BATCH = 2
 in_shape = (128, 128, 3)
 out_shape = (MY_BATCH, 7, 7, 1)
+
 residual_blocks = 6
 hidden_layers = 3
 my_opt = Adam(0.002, 0.5)
@@ -86,12 +87,19 @@ def load_images():
 ### 4. MODEL CONSTRUCTION
 # residual block used in the generators
 def residual_block(input):
-    res = Conv2D(128, kernel_size=3, strides=1, padding='same')(input)
-    res = BatchNormalization(axis=3, momentum=0.9, epsilon=1e-5)(res)
+    # first convolution block
+    res = Conv2D(128, kernel_size=3, strides=1,
+                 padding='same')(input)
+    res = BatchNormalization(axis=3, momentum=0.9,
+                             epsilon=1e-5)(res)
     res = Activation('relu')(res)
 
-    res = Conv2D(128, kernel_size=3, strides=1, padding='same')(res)
-    res = BatchNormalization(axis=3, momentum = 0.9, epsilon=1e-5)(res)
+
+    # second convolution block
+    res = Conv2D(128, kernel_size=3, strides=1,
+                 padding='same')(res)
+    res = BatchNormalization(axis=3, momentum = 0.9,
+                             epsilon=1e-5)(res)
 
     return Add()([res, input])
 
@@ -101,19 +109,20 @@ def residual_block(input):
 def build_generator():
     input_layer = Input(shape=in_shape)
 
-    # 1st convolution block
+    # first convolution block
     # shape changes to 128 x 128 x 32
-    x = Conv2D(32, kernel_size=7, strides=1, padding='same')(input_layer)
+    x = Conv2D(32, kernel_size=7, strides=1,
+               padding='same')(input_layer)
     x = BatchNormalization()(x)
     x = Activation("relu")(x)
 
-    # 2nd convolution block
+    # second convolution block
     # shape changes to 64 x 64 x 64
     x = Conv2D(64, kernel_size=3, strides=2, padding='same')(x)
     x = BatchNormalization()(x)
     x = Activation("relu")(x)
 
-    # 3rd convolution block
+    # third convolution block
     # shape changes to 32 x 32 x 128
     x = Conv2D(128, kernel_size=3, strides=2, padding='same')(x)
     x = BatchNormalization()(x)
@@ -124,13 +133,13 @@ def build_generator():
     for i in range(residual_blocks):
         x = residual_block(x)
 
-    # 1st upsampling block
+    # first upsampling block
     # shape changes to 64 x 64 x 64
     x = Conv2DTranspose(64, kernel_size=3, strides=2, padding = 'same')(x)
     x = BatchNormalization()(x)
     x = Activation("relu")(x)
 
-    # 2nd upsampling block
+    # second upsampling block
     # shape changes to 128 x 128 x 32
     x = Conv2DTranspose(32, kernel_size=3, strides=2, padding = 'same')(x)
     x = BatchNormalization()(x)
@@ -156,7 +165,7 @@ def build_discriminator():
     # shape changes to 130 x 130 x 3
     x = ZeroPadding2D(padding=(1, 1))(input_layer)
 
-    # 1st convolutional block
+    # first convolutional block
     # shape changes to 64 x 64 x 64
     x = Conv2D(64, kernel_size=4, strides=2, padding='valid')(x)
     x = LeakyReLU(alpha = 0.2)(x)
@@ -189,17 +198,18 @@ def build_discriminator():
 def build_two_disc():
     # discriminator A
     discriminatorA = build_discriminator()    
+    discriminatorA.compile(loss='mse', optimizer=my_opt,
+                           metrics=['accuracy'])
     print('\n=== Discriminator A summary')
     discriminatorA.summary()
 
     # discriminator B
     discriminatorB = build_discriminator()
+    discriminatorB.compile(loss='mse', optimizer=my_opt,
+                           metrics=['accuracy'])
     print('\n=== Discriminator B summary')
     discriminatorB.summary()
 
-    discriminatorA.compile(loss='mse', optimizer=my_opt, metrics=['accuracy'])
-    discriminatorB.compile(loss='mse', optimizer=my_opt, metrics=['accuracy'])
-    
     return discriminatorA, discriminatorB
 
 
@@ -261,8 +271,10 @@ def load_test_batch():
     all_B = []
     for i in range(MY_BATCH):
         # load and resize images
-        imgA = resize(imread(pick_A[i], pilmode = 'RGB').astype(np.float32), (128, 128))
-        imgB = resize(imread(pick_B[i], pilmode = 'RGB').astype(np.float32), (128, 128))
+        imgA = resize(imread(pick_A[i], pilmode = 'RGB')
+                      .astype(np.float32), (128, 128))
+        imgB = resize(imread(pick_B[i], pilmode = 'RGB')
+                      .astype(np.float32), (128, 128))
 
         all_A.append(imgA)
         all_B.append(imgB)
@@ -273,12 +285,12 @@ def load_test_batch():
 
     return np.array(all_A), np.array(all_B)
 
-# show 3 images per sample: original, generated, and reconstructed
+# show 3 images per set: original, generated, and reconstructed
 # the first set is paintings, the second set photos
 def save_images(ori_A, gen_B, recon_A, ori_B, gen_A, recon_B, path):
+    fig = plt.figure()
 
     # original painting A
-    fig = plt.figure()
     ax = fig.add_subplot(2, 3, 1)
     ax.imshow((ori_A * 127.5 + 127.5).astype(np.uint8))
     ax.axis("off")
@@ -314,6 +326,7 @@ def save_images(ori_A, gen_B, recon_A, ori_B, gen_A, recon_B, path):
     ax.axis("off")
     ax.set_title("Reconstructed")
 
+    # save the figures
     plt.savefig(path)
     plt.close()
 
@@ -326,15 +339,16 @@ def evaluate_GAN(epoch, generatorAtoB, generatorBtoA):
     gen_B = generatorAtoB.predict(batch_A)
     gen_A = generatorBtoA.predict(batch_B)
 
-    # Get reconstructed images
+    # obtain reconstructed images
     recon_A = generatorBtoA.predict(gen_B)
     recon_B = generatorAtoB.predict(gen_A)
 
     # save images
     for i in range(len(gen_A)):
-        where = os.path.join(OUT_DIR, "img-{}-{}".format(epoch, i))
-        save_images(batch_A[i], gen_B[i], recon_A[i], batch_B[i], gen_A[i],
-                    recon_B[i], path=where)
+        where = os.path.join(OUT_DIR, "img-{}-{}"
+                             .format(epoch, i))
+        save_images(batch_A[i], gen_B[i], recon_A[i], batch_B[i],
+                    gen_A[i], recon_B[i], path=where)
 
 
 ### 5. MODEL TRAINING
@@ -358,7 +372,8 @@ def train_discriminator(real_A, real_B):
     B_loss_r = discriminatorB.train_on_batch(real_B, all_1)
 
     # calculate the average loss
-    ave = (A_loss_r[0] + A_loss_f[0] + B_loss_r[0] + B_loss_f[0]) / 4
+    ave = (A_loss_r[0] + A_loss_f[0] + B_loss_r[0] +
+           B_loss_f[0]) / 4
 
     return ave
 
@@ -372,7 +387,8 @@ def train_generator(batch_A, batch_B):
     # returns 5 loss values
     # the first is the weighted some of the rest
     g_loss = cy_gan.train_on_batch([batch_A, batch_B],
-                                   [all_1, all_1, batch_A, batch_B])
+                                   [all_1, all_1,
+                                    batch_A, batch_B])
 
     return g_loss[0]
 
@@ -389,20 +405,19 @@ def train_GAN():
         pick = np.random.choice(num_img - MY_BATCH)
         batch_B = loadB[pick:pick + MY_BATCH]
 
-        # train discriminators and calculate loss
+        # train discriminators and generators
         d_loss = train_discriminator(batch_A, batch_B)
-
-        # train generators and calculate loss
         g_loss = train_generator(batch_A, batch_B)
 
-        if epoch % 5 == 0 or True:
-            print("Epoch: {}, discriminator loss: {:.3f}, generator loss: {:.3f}"
-                  .format(epoch, d_loss, g_loss))
-            evaluate_GAN(epoch, generatorAtoB, generatorBtoA)
+        print("Epoch: {}, discriminator loss: {:.3f}, "
+              "generator loss: {:.3f}"
+              .format(epoch, d_loss, g_loss))
+        evaluate_GAN(epoch, generatorAtoB, generatorBtoA)
 
     # print training time
     total = time() - began
-    print('\n=== Training Time: = {:.0f} secs, {:.1f} hrs'.format(total, total / 3600))
+    print('\n=== Training Time: = {:.0f} secs, {:.1f} hrs'
+          .format(total, total / 3600))
 
 
 ### 6. MODEL EVALUATION
@@ -431,8 +446,9 @@ def pred_GAN():
     # save images
     for i in range(len(gen_A)):
         where = os.path.join(OUT_DIR, "pred-{}".format(i))
-        save_images(batch_A[i], gen_B[i], recon_A[i], batch_B[i], gen_A[i], recon_B[i],
-            path=where)
+        save_images(batch_A[i], gen_B[i], recon_A[i],
+                    batch_B[i], gen_A[i], recon_B[i],
+                    path=where)
 
 
 ### 7. MAIN ROUTINE

@@ -11,10 +11,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 
-from keras.utils import to_categorical
-from keras.layers import Input, Dense, Flatten, Reshape, Concatenate
-from keras.layers import BatchNormalization, Activation, Conv2D, Conv2DTranspose
+from keras.layers import Input, Dense, Flatten
+from keras.layers import Reshape, Concatenate
+from keras.layers import BatchNormalization, Activation
+from keras.layers import Conv2D, Conv2DTranspose
 from keras.layers.advanced_activations import LeakyReLU
+
+from keras.utils import to_categorical
 from keras.models import Model
 from keras.optimizers import Adam
 from keras.datasets import cifar10
@@ -24,11 +27,11 @@ from keras.preprocessing import image
 
 ### 2. CONSTANTS AND HYPER-PARAMETERS
 MY_EPOCH = 2
-MY_BATCH = 16
+MY_BATCH = 256
 MY_NOISE = 100
 
-tags = ['Airplane', 'Automobile', 'Bird', 'Cat', 'Deer', 'Dog', 'Frog',
-        'Horse', 'Ship', 'Truck']
+tags = ['Airplane', 'Automobile', 'Bird', 'Cat', 'Deer', 'Dog',
+        'Frog', 'Horse', 'Ship', 'Truck']
 
 # 1 : we do training from scratch
 # 0:  we do prediction using the saved models
@@ -71,6 +74,7 @@ def build_gen(input_layer, condition_layer):
     hid = Dense(128 * 8 * 8, activation='relu')(merged)
     hid = BatchNormalization(momentum=0.9)(hid)
     hid = LeakyReLU(alpha=0.1)(hid)
+
     # reshape 8,192 to 8 x 8 x 128 to enter convolution
     hid = Reshape((8, 8, 128))(hid)
 
@@ -88,7 +92,7 @@ def build_gen(input_layer, condition_layer):
 
     # second convolution block
     # shape remains the same: 16 x 16 x 128
-    hid = Conv2D(128, kernel_size=5, strides=1,padding='same')(hid)
+    hid = Conv2D(128, kernel_size=5, strides=1, padding='same')(hid)
     hid = BatchNormalization(momentum=0.9)(hid)
     hid = LeakyReLU(alpha=0.1)(hid)
 
@@ -172,6 +176,8 @@ def build_GAN():
     discriminator = build_disc(img_input, disc_cond)
     discriminator.compile(optimizer=Adam(0.001, 0.5), loss='binary_crossentropy',
                           metrics=['accuracy'])
+
+    # fix discriminator weights durng generator training
     discriminator.trainable = False
 
     # build generator. we do NOT compile generator
@@ -245,7 +251,8 @@ def train_gen():
     # the goal is to fool discriminator
     # returns one value: loss
     all_1 = 1 - np.random.rand(MY_BATCH, 1) * 0.05
-    g_loss = cnd_gan.train_on_batch([noise, labels_ran, labels_ran], all_1)
+    g_loss = cnd_gan.train_on_batch([noise, labels_ran,
+                                     labels_ran], all_1)
 
     return g_loss
 
@@ -281,26 +288,25 @@ def train_GAN():
 
     # total number of batches used for each epoch
     num_batches = int(X_train.shape[0] / MY_BATCH)
-    num_batches = 10
     print('Batch count = ', num_batches)
 
     began = time()
     for epoch in range(MY_EPOCH):
+        print('\nEpoch', epoch)
         for bid in range(num_batches):
-            # train discriminator and generator and obtain their loss values
+            # train discriminator and generator
             d_loss = train_disc(bid)
             g_loss = train_gen()
 
             # print the current status
-            if bid % 100 == 0 or True:
-                print('Epoch: {}, batch: {}, generator loss: {:.3f}, discriminator loss: {:.3f}'
-                      .format(epoch, bid, g_loss, d_loss))
-        print('Epoch: {}, generator loss: {:.3f}, discriminator loss: {:.3f}\n'
-              .format(epoch, g_loss, d_loss))
+            print('Batch: {}/{}, generator loss: {:.3f}, '
+                  'discriminator loss: {:.3f}'
+                  .format(bid, num_batches, g_loss, d_loss))
         save_samples(epoch)
 
     total = time() - began
-    print('\n=== Training Time: = {:.0f} secs, {:.1f} hrs'.format(total, total / 3600))
+    print('\n=== Training Time: = {:.0f} secs, {:.1f} hrs'
+          .format(total, total / 3600))
 
 
 ### 6. MODEL EVALUATION
@@ -308,7 +314,7 @@ def train_GAN():
 def pred_GAN():
     print('\n=== GAN PREDICTION BEGINS')
 
-    # build generatpr for prediction
+    # build generator for prediction
     noise_input = Input(shape=(MY_NOISE,))
     gen_cond = Input(shape=(10,))
     generator = build_gen(noise_input, gen_cond)
@@ -326,11 +332,12 @@ def pred_GAN():
         count = 0
         for i in range(3):
             for j in range(3):
-                # converts 3D nnmpy array to PIL image instance
+                # converts 3D numpy array to PIL image instance
                 img = image.array_to_img(fake[count], scale=True)
                 axs[i,j].imshow(img)
                 axs[i,j].axis('off')
-                plt.suptitle('Label: ' + str(tag) + ', ' + tags[tag])
+                plt.suptitle('Label: ' + str(tag) + ', ' +
+                             tags[tag])
                 count += 1
 
         # save the images
@@ -343,6 +350,7 @@ def pred_GAN():
 # if training is not done, we do training and save the models
 # otherwise, we use the saved models to do prediction
 X_train, Y_train = read_dataset()
+
 if TRAINING:
     generator, discriminator, cnd_gan = build_GAN()
     train_GAN()

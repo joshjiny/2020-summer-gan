@@ -28,7 +28,8 @@ MY_NOISE = 100
 img_shape = (28, 28, 1)
 num_classes = 10
 
-# number of labeled examples to use (rest will be used as unlabeled)
+# number of labeled examples to use
+# rest will be used as unlabeled
 num_labeled = 100
 
 # create output directory
@@ -66,7 +67,8 @@ def batch_labeled():
 # random batch from the remaining 59,900 training images
 # this is used to train unsupervised discriminator
 def batch_unlabeled():
-    idx = np.random.randint(num_labeled, X_train.shape[0], MY_BATCH)
+    idx = np.random.randint(num_labeled, X_train.shape[0],
+                            MY_BATCH)
     imgs = X_train[idx]
 
     return imgs
@@ -118,7 +120,8 @@ def build_disc_common():
 
     # 1st convolutional block
     # dimension becomes 14 x 14 x 32
-    model.add(Conv2D(32, kernel_size=3, strides=2, input_shape = img_shape,
+    model.add(Conv2D(32, kernel_size=3, strides=2,
+                     input_shape = img_shape,
                      padding='same'))
     model.add(LeakyReLU(alpha=0.01))
 
@@ -171,27 +174,29 @@ def build_disc_unsuper(common):
     return model
 
 
-# we build three discriminators: common, supervised, unsupervised
+# build three discriminators: common, supervised, unsupervised
 # our GAN merges generator and unsupervised discriminator
 def build_GAN():
     # build the common discriminator
-    # these layers are shared between supervised and unsupervised training
+    # shared between supervised and unsupervised training
     share = build_disc_common()
 
     # build & compile the discriminator for supervised training
     disc_super = build_disc_super(share)
-    disc_super.compile(optimizer='Adam', loss='categorical_crossentropy',
+    disc_super.compile(optimizer='Adam',
+                       loss='categorical_crossentropy',
                        metrics=['accuracy'])
 
     # build & compile the discriminator for unsupervised training
     # note that we do not care about accuracy
     disc_unsuper = build_disc_unsuper(share)
-    disc_unsuper.compile(optimizer='Adam', loss='binary_crossentropy')
+    disc_unsuper.compile(optimizer='Adam',
+                         loss='binary_crossentropy')
 
     # build generator
     generator = build_generator()
 
-    # keep discriminator’s parameters constant for generator training
+    # fix discriminator during generator training
     disc_unsuper.trainable = False
 
     model = Sequential()
@@ -233,7 +238,8 @@ def train_discriminator():
     # unsupervised train on real unlabeled examples
     # unsupervised discriminator has 1 sigmoid output
     # returns one value: loss
-    d_loss_real = disc_unsuper.train_on_batch(imgs_unlabeled, all_1)
+    d_loss_real = disc_unsuper.train_on_batch(imgs_unlabeled,
+                                              all_1)
 
     # unsupervised train on fake examples
     # returns one value: loss
@@ -293,15 +299,18 @@ def train_GAN():
 
         # output generator and discriminator loss values
         if itr % 100 == 0 or True:
-            print('Epoch: {}, generator loss: {:.3f}, discriminator super loss: {:.3f}, '
-                  'unsuper loss: {:.3f}'.format(itr, g_loss, d_loss_s, d_loss_u))
+            print('Epoch: {}, generator loss: {:.3f}, '
+                  'discriminator super loss: {:.3f}, '
+                  'unsuper loss: {:.3f}'
+                  .format(itr, g_loss, d_loss_s, d_loss_u))
 
             # output a sample of generated image
             save_images(itr)
 
     # print training time
     total = time() - began
-    print('\n=== Training Time: = {:.0f} secs, {:.1f} hrs'.format(total, total / 3600))
+    print('\n=== Training Time: = {:.0f} secs, {:.1f} hrs'
+          .format(total, total / 3600))
 
 
 
@@ -323,7 +332,7 @@ def eval_disc():
 
     # evaluating semi-supervised discriminator
     # compute classification accuracy on test set
-    _, accuracy = disc_super.evaluate(X_test, Y_test, verbose = 0)
+    _, accuracy = disc_super.evaluate(X_test, Y_test, verbose=0)
     print("Test accuracy: %.2f%%" % (100 * accuracy))
 
 
