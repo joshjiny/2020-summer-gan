@@ -10,6 +10,7 @@
 import os, glob
 import matplotlib.pyplot as plt
 import numpy as np
+import shutil
 
 from keras import Input
 from time import time
@@ -42,7 +43,10 @@ TRAINING = 1
 # directories
 DB_DIR = "./celeb/*.*"
 OUT_DIR = "./output"
-if not os.path.exists(OUT_DIR):
+if os.path.exists(OUT_DIR):
+    shutil.rmtree(OUT_DIR)
+    os.makedirs(OUT_DIR)
+else:
     os.makedirs(OUT_DIR)
 
 
