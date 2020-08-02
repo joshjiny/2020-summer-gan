@@ -1,6 +1,6 @@
 # Image Generation with Keras Conditional GAN
 # Dataset: CIFAR-10
-# July 16, 2020
+# August 3, 2020
 # Sung Kyu Lim
 # Georgia Institute of Technology
 # limsk@ece.gatech.edu
@@ -10,6 +10,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import shutil
 
 from keras.layers import Input, Dense, Flatten
 from keras.layers import Reshape, Concatenate
@@ -19,10 +20,8 @@ from keras.layers.advanced_activations import LeakyReLU
 
 from keras.utils import to_categorical
 from keras.models import Model
-from keras.optimizers import Adam
 from keras.datasets import cifar10
 from time import time
-import shutil
 from keras.preprocessing import image
 
 
@@ -76,7 +75,7 @@ def build_gen(input_layer, condition_layer):
 
     # merge 110 input values and expands to 8,192 values
     hid = Dense(128 * 8 * 8, activation='relu')(merged)
-    hid = BatchNormalization(momentum=0.9)(hid)
+    hid = BatchNormalization()(hid)
     hid = LeakyReLU(alpha=0.1)(hid)
 
     # reshape 8,192 to 8 x 8 x 128 to enter convolution
@@ -85,31 +84,31 @@ def build_gen(input_layer, condition_layer):
     # first convolution block
     # shape remains the same: 8 x 8 x 128
     hid = Conv2D(128, kernel_size=4, strides=1, padding='same')(hid)
-    hid = BatchNormalization(momentum=0.9)(hid)
+    hid = BatchNormalization()(hid)
     hid = LeakyReLU(alpha=0.1)(hid)
 
     # first convolution transpose block
     # shape expands to 16 x 16 x 128
-    hid = Conv2DTranspose(128, 4, strides=2, padding='same')(hid)
-    hid = BatchNormalization(momentum=0.9)(hid)
+    hid = Conv2DTranspose(128, kernel_size=4, strides=2, padding='same')(hid)
+    hid = BatchNormalization()(hid)
     hid = LeakyReLU(alpha=0.1)(hid)
 
     # second convolution block
     # shape remains the same: 16 x 16 x 128
     hid = Conv2D(128, kernel_size=5, strides=1, padding='same')(hid)
-    hid = BatchNormalization(momentum=0.9)(hid)
+    hid = BatchNormalization()(hid)
     hid = LeakyReLU(alpha=0.1)(hid)
 
     # second convolution transpose block
     # shape expands to 32 x 32 x 128
-    hid = Conv2DTranspose(128, 4, strides=2, padding='same')(hid)
-    hid = BatchNormalization(momentum=0.9)(hid)
+    hid = Conv2DTranspose(128, kernel_size=4, strides=2, padding='same')(hid)
+    hid = BatchNormalization()(hid)
     hid = LeakyReLU(alpha=0.1)(hid)
 
     # third convolution block
     # shape remains the same: 32 x 32 x 128
     hid = Conv2D(128, kernel_size=5, strides=1, padding='same')(hid)
-    hid = BatchNormalization(momentum=0.9)(hid)
+    hid = BatchNormalization()(hid)
     hid = LeakyReLU(alpha=0.1)(hid)
 
     # fourth convolution block
@@ -132,25 +131,25 @@ def build_disc(input_layer, condition_layer):
     # first convolution block
     # shape expands to 32 x 32 x 128
     hid = Conv2D(128, kernel_size=3, strides=1, padding='same')(input_layer)
-    hid = BatchNormalization(momentum=0.9)(hid)
+    hid = BatchNormalization()(hid)
     hid = LeakyReLU(alpha=0.1)(hid)
 
     # second convolution block
     # shape shrinks to 16 x 16 x 128
     hid = Conv2D(128, kernel_size=4, strides=2, padding='same')(hid)
-    hid = BatchNormalization(momentum=0.9)(hid)
+    hid = BatchNormalization()(hid)
     hid = LeakyReLU(alpha=0.1)(hid)
 
     # third convolution block
     # shape shrinks to 8 x 8 x 128
     hid = Conv2D(128, kernel_size=4, strides=2, padding='same')(hid)
-    hid = BatchNormalization(momentum=0.9)(hid)
+    hid = BatchNormalization()(hid)
     hid = LeakyReLU(alpha=0.1)(hid)
 
     # fourth convolution block
     # shape shrinks to 4 x 4 x 128
     hid = Conv2D(128, kernel_size=4, strides=2, padding='same')(hid)
-    hid = BatchNormalization(momentum=0.9)(hid)
+    hid = BatchNormalization()(hid)
     hid = LeakyReLU(alpha=0.1)(hid)
 
     # flatten to merge with conditional input
@@ -178,23 +177,22 @@ def build_GAN():
     img_input = Input(shape=(32, 32, 3))
     disc_cond = Input(shape=(10,))
     discriminator = build_disc(img_input, disc_cond)
-    discriminator.compile(optimizer=Adam(0.001, 0.5), loss='binary_crossentropy',
+    discriminator.compile(optimizer='adam', loss='binary_crossentropy',
                           metrics=['accuracy'])
 
     # fix discriminator weights durng generator training
     discriminator.trainable = False
 
     # build generator. we do NOT compile generator
-    noise_input = Input(shape=(MY_NOISE,))
+    noise = Input(shape=(MY_NOISE,))
     gen_cond = Input(shape=(10,))
-    generator = build_gen(noise_input, gen_cond)
+    generator = build_gen(noise, gen_cond)
 
     # combine discriminator and generator to build GAN
-    noise = Input(shape=(MY_NOISE,))
     fake = generator([noise, gen_cond])
     gan_out = discriminator([fake, disc_cond])
     cnd_gan = Model(inputs=[noise, gen_cond, disc_cond], output=gan_out)
-    cnd_gan.compile(optimizer=Adam(0.001, 0.5), loss='binary_crossentropy')
+    cnd_gan.compile(optimizer='adam', loss='binary_crossentropy')
 
     print('\n=== GAN SUMMARY ===')
     cnd_gan.summary()
@@ -319,9 +317,9 @@ def pred_GAN():
     print('\n=== GAN PREDICTION BEGINS')
 
     # build generator for prediction
-    noise_input = Input(shape=(MY_NOISE,))
+    noise = Input(shape=(MY_NOISE,))
     gen_cond = Input(shape=(10,))
-    generator = build_gen(noise_input, gen_cond)
+    generator = build_gen(noise, gen_cond)
     generator.load_weights('./generator.h5')
 
     for tag in range(10):
