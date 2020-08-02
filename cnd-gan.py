@@ -22,6 +22,7 @@ from keras.models import Model
 from keras.optimizers import Adam
 from keras.datasets import cifar10
 from time import time
+import shutil
 from keras.preprocessing import image
 
 
@@ -39,7 +40,10 @@ TRAINING = 1
 
 # create output directory
 OUT_DIR = "./output/"
-if not os.path.exists(OUT_DIR):
+if os.path.exists(OUT_DIR):
+    shutil.rmtree(OUT_DIR)
+    os.makedirs(OUT_DIR)
+else:
     os.makedirs(OUT_DIR)
 
 
