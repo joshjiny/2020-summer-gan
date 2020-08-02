@@ -112,7 +112,7 @@ def build_gen(input_layer, condition_layer):
     hid = LeakyReLU(alpha=0.1)(hid)
 
     # fourth convolution block
-    # shape changes tp 32 x 32 x 3
+    # shape changes to 32 x 32 x 3
     hid = Conv2D(3, kernel_size=5, strides=1, padding="same")(hid)
     out = Activation("tanh")(hid)
 
@@ -130,6 +130,7 @@ def build_gen(input_layer, condition_layer):
 def build_disc(input_layer, condition_layer):
     # first convolution block
     # shape expands to 32 x 32 x 128
+    # we do NOT concatenate the conditional input here!
     hid = Conv2D(128, kernel_size=3, strides=1, padding='same')(input_layer)
     hid = BatchNormalization()(hid)
     hid = LeakyReLU(alpha=0.1)(hid)
@@ -156,7 +157,7 @@ def build_disc(input_layer, condition_layer):
     # 4 x 4 x 128 becomes 2,048 value vector
     hid = Flatten()(hid)
 
-    # merge with 10 conditional input values here
+    # concatenate with 10 conditional input here!
     # 2,048 becomes 2,058
     merged = Concatenate()([hid, condition_layer])
 
