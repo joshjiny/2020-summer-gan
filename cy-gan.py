@@ -10,6 +10,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import shutil
 
 from time import time
 from glob import glob
@@ -39,7 +40,10 @@ TRAINING = 1
 # create directories
 data_dir = "./monet2photo/"
 OUT_DIR = "./output/"
-if not os.path.exists(OUT_DIR):
+if os.path.exists(OUT_DIR):
+    shutil.rmtree(OUT_DIR)
+    os.makedirs(OUT_DIR)
+else:
     os.makedirs(OUT_DIR)
 
 
