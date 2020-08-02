@@ -10,6 +10,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import shutil
 from time import time
 
 from keras.datasets import mnist
@@ -34,7 +35,10 @@ num_labeled = 100
 
 # create output directory
 OUT_DIR = "./output/"
-if not os.path.exists(OUT_DIR):
+if os.path.exists(OUT_DIR):
+    shutil.rmtree(OUT_DIR)
+    os.makedirs(OUT_DIR)
+else:
     os.makedirs(OUT_DIR)
 
 
