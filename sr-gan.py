@@ -12,16 +12,17 @@ import matplotlib.pyplot as plt
 import numpy as np
 import shutil
 
-from keras import Input
 from time import time
 from keras.applications import ResNet50
+from keras.models import Model
+from imageio import imread
+from skimage.transform import resize
+
+from keras import Input
 from keras.layers import BatchNormalization, Activation
 from keras.layers import LeakyReLU, Add, Dense
 from keras.layers import Conv2D, UpSampling2D
-from keras.models import Model
-from keras.optimizers import Adam
-from imageio import imread
-from skimage.transform import resize
+
 
 
 ### 2. CONSTANTS AND HYPER-PARAMETERS
@@ -31,10 +32,8 @@ LOW_SHAPE = (64, 64, 3)
 HIGH_SHAPE = (256, 256, 3)
 DIS_ANS = (MY_BATCH, 16, 16, 1)
 
-MY_MOM = 0.8
 MY_ALPHA = 0.2
 MY_RESIDUAL = 15
-MY_OPT = Adam(0.0002, 0.5)
 
 # 1 : we do training from scratch
 # 0:  we do prediction using the saved models
@@ -126,40 +125,40 @@ def build_discriminator():
     # image shape reduces to 128 x 128 x 64
     dis2 = MY_CONV(64, 3, 2)(dis1)
     dis2 = LeakyReLU(MY_ALPHA)(dis2)
-    dis2 = BatchNormalization(momentum = MY_MOM)(dis2)
+    dis2 = BatchNormalization()(dis2)
 
     # third convolution block
     dis3 = MY_CONV(128, 3, 1)(dis2)
     dis3 = LeakyReLU(MY_ALPHA)(dis3)
-    dis3 = BatchNormalization(momentum = MY_MOM)(dis3)
+    dis3 = BatchNormalization()(dis3)
 
     # fourth convolution block
     # image shape reduces to 64 x 64 x 128
     dis4 = MY_CONV(128, 3, 2)(dis3)
     dis4 = LeakyReLU(MY_ALPHA)(dis4)
-    dis4 = BatchNormalization(momentum = MY_MOM)(dis4)
+    dis4 = BatchNormalization()(dis4)
 
     # fifth convolution block
     dis5 = MY_CONV(256, 3, 1)(dis4)
     dis5 = LeakyReLU(MY_ALPHA)(dis5)
-    dis5 = BatchNormalization(momentum = MY_MOM)(dis5)
+    dis5 = BatchNormalization()(dis5)
 
     # sixth convolution block
     # image shape reduces to 32 x 32 x 256
     dis6 = MY_CONV(256, 3, 2)(dis5)
     dis6 = LeakyReLU(MY_ALPHA)(dis6)
-    dis6 = BatchNormalization(momentum = MY_MOM)(dis6)
+    dis6 = BatchNormalization()(dis6)
 
     # seventh convolution block
     dis7 = MY_CONV(512, 3, 1)(dis6)
     dis7 = LeakyReLU(MY_ALPHA)(dis7)
-    dis7 = BatchNormalization(momentum = MY_MOM)(dis7)
+    dis7 = BatchNormalization()(dis7)
 
     # eight convolution block
     # image shape reduces to 16 x 16 x 512
     dis8 = MY_CONV(512, 3, 2)(dis7)
     dis8 = LeakyReLU(MY_ALPHA)(dis8)
-    dis8 = BatchNormalization(momentum = MY_MOM)(dis8)
+    dis8 = BatchNormalization()(dis8)
 
     # add a dense layer
     # image channel reduces to 16 x 16 x 1024
@@ -213,7 +212,7 @@ def build_generator():
     # post-residual block
     # shape remains 64 x 64 x 64
     gen2 = MY_CONV(64, 3, 1)(res)
-    gen2 = BatchNormalization(momentum = MY_MOM)(gen2)
+    gen2 = BatchNormalization()(gen2)
 
     # take the sum of the output from pre-residual block (gen1) 
     # and the post-residual block (gen2)
@@ -253,7 +252,7 @@ def build_GAN():
 
     # build and compile the discriminator network
     discriminator = build_discriminator()
-    discriminator.compile(loss='mse', optimizer=MY_OPT,
+    discriminator.compile(loss='mse', optimizer='adam',
                           metrics=['acc'])
 
     # build generator (we do not compile generator)
@@ -279,7 +278,7 @@ def build_GAN():
 
     # GAN loss = 0.001 x entropy (probs) + 1 x mse (features)
     sr_gan.compile(loss=['binary_crossentropy', 'mse'],
-            loss_weights=[0.001, 1], optimizer = MY_OPT)
+            loss_weights=[0.001, 1], optimizer = 'adam'')
 
     print('\n=== GAN SUMMARY')
     sr_gan.summary()
