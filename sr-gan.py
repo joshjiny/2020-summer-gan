@@ -161,7 +161,7 @@ def build_discriminator():
     dis8 = BatchNormalization()(dis8)
 
     # add a dense layer
-    # image channel reduces to 16 x 16 x 1024
+    # image channel increases to 16 x 16 x 1024
     dis9 = Dense(units=1024)(dis8)
     dis9 = LeakyReLU(MY_ALPHA)(dis9)
 
